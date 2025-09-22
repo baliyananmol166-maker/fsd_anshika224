@@ -2,50 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <style> 
-      table,th,td {
-          border: 100px solid black;
-
-
-    }
-    td{
-           background-color: beige;
-    }
-    td{
-           border:10px solid black;
-           border-radius: 100px;
-           border-style: groove;
-           text-align: right;
-           border-spacing: 100px;
-    }
-    td:nth-child(even){
-           background-color: aqua;
-    }
-   </style> 
+    
 </head>
+<style>
+    
+    table,th,td{
+        border:1px solid black;
+        border-radius: 10px;
+        border-style: double;
+        padding: 10px;
+        border-spacing: 1px;
+
+    }
+    td{
+            background-color: lightgreen;
+        }
+    td:nth-child(even)  {
+        background-color: lightskyblue;
+    }  
+    
+     th:nth-child(even)  {
+        background-color: lightpink;
+    }  
+    td:hover{
+        background-color:yellow
+    }
+</style>
 <body>
-  <h1>  hello</h1> 
-  <h2> Anshika</h2> 
-  <h3>  Good evening</h3>
-  <h4> CSE 15</h4> 
-  <table style="width:50%">
-      <captain> Student Details</captain>
-      <tr>
-        <th>S.No</th>
-        <th>Name</th>
-        <th>Roll no</th>
-      </tr>
-      <tr>
-        <td>1</td>
-        <td>Anshika</td>
-        <td>7</td>
-      </tr>
-      <tr>
-         <td>2</td>
-         <td>Phthon</td>
-         <td>8</td>
-      </tr>
-      </table>
+    <table style="width:100px">
+        <caption>student detail</caption>
+        <col span="1" style="background-color: red">
+        <tr>
+            <th>srno</th>
+            <th >name</th>
+            <th>roll no</th>
+        </tr>
+        <tr>
+
+            <td>7</td>
+            <td>Anshika</td>
+            <td>2400320100224</td>
+        </tr>
+    </table>
+    <ul>
+        <li>coffee</li>
+        <li>tea</li>
+        <li>milk</li>
+    </ul>
+    <ol>
+        <dt>coffee</dt>
+        <dt>tea</td>
+        <dt>milk</dt>
+    </ol>
+<div class="xclass1">
+    <h1>coffee</h1>
+</body>
 </html>
