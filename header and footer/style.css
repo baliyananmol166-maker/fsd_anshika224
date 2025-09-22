@@ -1,57 +1,97 @@
-@import url(https://fonts.googleapis.com/css2?family=Arima&display=swap)
-
+@import url('https://fonts.googleapis.com/css2?family=Arima&display=swap')
 body{
-    background-color: #f0f0f0;
-    margin:0;
+    margin :0;
+    font-family:Arial ;
+}
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background: #f4f4f4;
+  color: #333;
+}
 
+header {
+  background: #222;
+  color: white;
+  padding: 20px;
 }
+
+h1, h2, h3 {
+  margin: 10px 0;
+}
+
+.social-icon {
+  margin: 40px 0;
+}
+
+.social-icon a {
+  margin: 0 10px;
+  font-size: 30px;
+  text-decoration: none;
+  transition: transform 0.3s, color 0.3s;
+}
+
+.social-icon a:hover {
+  transform: scale(1.5);
+  color: #ff4757;
+}
+
+.youtube { color: red; }
+.linkedin { color:red; }
+.github { color:red; }
+.hackerrank { color:red; }
+.codechef { color:red; }
 header{
-    background-color:red;
-    color: white;
+    background-color: rgb(248, 93, 175);
     padding: 10px 0;
+    color:white;
     text-align: center;
-    font-family: 'Arima', cursive;
+    font-family: 'Arima';
 }
 header{
-    background-color: red;
-    color: white;
-    padding: 15p;
-    text-align: center;
+    background-color: #cb517c;
+    color: aquamarine;
 
 }
 header h1{
-    margin:0;
-    font-size: 24px;
+    color: rgb(87, 197, 175);
+}
+header p{
+    color:rgb(92, 145, 171);
 }
 main{
-    flex: 1;
-    padding: 20px;
-
-}    
+    flex:1;
+    padding:20px;
+}
 footer{
-    background-color: #333333;
-    color: white;
-    padding:15px;
+    background-color: rgb(84, 197, 207);
+    color:azure;
+    padding: 15px;
     text-align: center;
 }
 .social-icon{
+
+    margin: 10px;
+}
+.social-icon.a{
+    color: deeppink;
+    text text-decoration:none ;
     margin:0 10px;
-    color: white;
-    text-decoration: none;
-    font-size: 15px;
-    transition: color 0.3s ease;
+    font-size:15px;
+    transition:color 0.3s ease;
 }
-.social-icon a.Youtube:hover{
-    color: red;
-}
-.social-icon a.Linkedin:hover{
-    color: rgb(0, 110, 255);
-}
- 
-@media (max-width: 600px){
-    header p{
-        font-size: 20px;
-        margin: 
-    }
+.social-icon a.youtube:hover{
+    color:rgb(147, 182, 31);
 }
 
+.social-icon a.linkedin:hover{
+    color:rgb(7, 211, 34);
+}
+.social-icon a.github:hover{
+    color:rgb(109, 83, 189);
+}
+.social-icon a.codechef:hover{
+    color:rgb(16, 15, 12);
+}
