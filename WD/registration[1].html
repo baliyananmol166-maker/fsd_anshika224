@@ -1,0 +1,52 @@
+<!--Anshika-->
+<!--2400320100224-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JS Validation</title>
+
+    <script>
+        function validateForm() {
+            let name = document.getElementById("name").value;
+            let pass = document.getElementById("password").value;
+
+            // Name Validation
+            let namePattern = /^[A-Za-z]+$/;
+
+            if (name.length < 6) {
+                alert("Name must be at least 6 characters long.");
+                return false;
+            }
+
+            if (!name.match(namePattern)) {
+                alert("Name must contain alphabets only.");
+                return false;
+            }
+
+            // Password Validation
+            if (pass.length < 6) {
+                alert("Password should not be less than 6 characters.");
+                return false;
+            }
+
+            alert("Form Submitted Successfully!");
+            return true;
+        }
+    </script>
+</head>
+
+<body>
+    <h2>Registration Form</h2>
+
+    <form onsubmit="return validateForm()">
+        <label>Name:</label>
+        <input type="text" id="name"><br><br>
+
+        <label>Password:</label>
+        <input type="password" id="password"><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+
+</body>
+</html>

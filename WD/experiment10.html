@@ -1,0 +1,133 @@
+<!--Anshika-->
+<!--2400320100224-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Portfolio Slide</title>
+    <style>
+        body {
+            margin:0;
+            padding: 0;
+            overflow:hidden; /* No scrolling */
+            font-family:Arial, sans-serif;
+            background-attachment:#f3f3f3;
+            height:100vh;
+            width:100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Container for full slide */
+        .slide {
+            background: white;
+            width: 95vw;
+            height: 95vh;
+            border-radius: 15px;
+            padding:20px;
+            box-sizing:border-box;
+
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 10px;
+        }
+
+        .section{
+            background: #fafafa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding:10px;
+            text-align:center;
+        }
+
+        .section h3 {
+            margin: 5px 0;
+            font-size: 18px;
+        }
+
+        /* Skills in one line */
+        .skills-box {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        /* Projects in small grid */
+        .projects-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        /* Images small to fit screen */
+        img {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid black;
+        }
+
+        /* Button (JS) */
+        button {
+            padding:5px 10px;
+            background: black;
+            color: white;
+            border:none;
+            cursor:pointer;
+            margin-top: 5px;
+        }    
+    </style>
+</head>
+<body>
+    <div class="slide">
+        <!-- About-->
+        <div class="section">
+            <h3>About me</h3>
+            <img src="https://picsum.photos/200?random=50"
+            <p id="text">Hi, I am <b>Anshika</b>.</p>
+            <button onclick="change()">Change Text</button>
+        </div>
+
+        <!-- Skills-->
+         <div class="section">
+            <h3>Skills</h3>
+            <div class="skills-box">
+                <div>HTML</div>
+                <div>CSS</div>  
+                <div>JavaScript</div>
+                <div>C++</div>
+            </div>
+        </div>
+
+        <!-- Projects-->
+        <div class="section">
+            <h3>Projects</h3>
+            <div class="projects-box">
+                <div>Calculator</div>
+                <div>Portfolio</div>  
+                <div>To-Do App</div>
+                <div>Login Page</div>
+            </div>
+        </div>
+
+        <!-- Contact-->
+        <div class="section">
+            <h3>Contact</h3>
+            <p>Email:anshikabaliyan299@mail.com</p>
+            <p>Phone: 9410243812</p>
+        </div>
+    </div>
+
+    <script>
+        function change() {
+            document.getElementById("text").innerHTML = "Thanks for viewing my static slide!";
+        }
+    </script>
+    
+</body>
+</html>

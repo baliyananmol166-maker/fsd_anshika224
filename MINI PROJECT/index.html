@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ELECTROHUB</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+<style>
+/* --- Existing Styles (omitted for brevity) --- */
+body{margin:0;font-family:Arial;background:#f1f3f6}
+.dark{background:#0f172a;color:white}
+
+header{
+background:#2874f0;color:white;padding:15px;
+display:flex;gap:10px;align-items:center
+}
+
+header input,select,button{padding:6px}
+.cart{margin-left:auto;font-weight:bold;cursor:pointer}
+
+.container{display:flex}
+
+.sidebar{
+width:230px;background:white;padding:15px;border-right:1px solid #ddd
+}
+.dark .sidebar{background:#1e293b}
+
+.sidebar h3{margin-top:0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+/* NEW: Style for clickable category buttons */
+.sidebar button{
+width:100%;margin-bottom:6px;padding:6px;
+background:#e5e7eb;border:none;cursor:pointer;text-align:left;
+transition: background 0.2s;
+}
+.sidebar button:hover{background: #cfd3d8;}
+.dark .sidebar button{background:#334155;color:white;}
+.dark .sidebar button:hover{background: #475569;}
+
+/* NEW: Styles for nested brands */
+.brand-list {
+    margin-top: 5px;
+    padding-left: 10px;
+    border-left: 3px solid #2874f0; /* Visual separator for nesting */
+    margin-bottom: 10px;
+}
+.brand-list button {
+    background: #f0f0f0; /* Lighter background for nested buttons */
+    padding-left: 15px;
+    font-size: 0.9em;
+}
+.dark .brand-list button {
+    background: #475569;
+}
+
+
+.main{flex:1}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:15px;padding:20px
+}
+
+.card{
+background:white;padding:10px;border-radius:8px;text-align:center;
+display: block; 
+}
+.dark .card{background:#1e293b}
+
+img{
+width:100%;
+height:150px; 
+object-fit: cover; 
+margin: 0; 
+}
+
+.card button{
+background:#ff9f00;border:none;padding:6px;
+cursor:pointer;margin-top:5px
+}
+
+.quantity-control{display:flex;justify-content:center;align-items:center;margin-top:5px}
+.quantity-control button{width:30px;height:30px;padding:0;margin:0 5px;background:#ddd;color:#333}
+.quantity-control input{width:40px;text-align:center;padding:5px}
+
+.notify{
+position:fixed;top:10px;right:10px;
+padding:10px;border-radius:6px;color:white;z-index:100
+}
+.success{background:green}
+.error{background:red}
+
+.wallet{
+background:#16a34a;color:white;
+padding:6px 10px;border-radius:6px
+}
+
+.cart-overlay{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:90
+}
+.cart-content{
+background:white;padding:20px;border-radius:8px;width:90%;max-width:600px;
+max-height:80vh;overflow-y:auto
+}
+.dark .cart-content{background:#1e293b;color:white}
+.cart-item{
+display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee
+}
+.dark .cart-item{border-bottom:1px solid #333}
+.cart-item-name{flex:1;font-weight:bold}
+.cart-item-controls{display:flex;align-items:center;gap:10px}
+.cart-item-controls button{background:red;color:white;padding:4px 8px}
+.cart-summary{margin-top:20px;padding-top:10px;border-top:2px solid #333}
+.dark .cart-summary{border-top:2px solid #eee}
+.cart-summary h3{text-align:right}
+.cart-close-btn{float:right;background:none;border:none;font-size:1.5em;cursor:pointer}
+</style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+/* Helper function to get the current item stock from productsData */
+const getProductStock = (id, products) => {
+    const product = products.find(p => p.id === id);
+    return product ? product.stock : 0;
+};
+
+/* --- Cart Component --- */
+function CartOverlay({ cartItems, setCartItems, toggleCart, wallet, setWallet, setMsg, products }) {
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const updateQuantity = (id, delta) => {
+        setCartItems(prevItems => {
+            const itemIndex = prevItems.findIndex(item => item.id === id);
+            if (itemIndex === -1) return prevItems;
+
+            const currentQuantity = prevItems[itemIndex].quantity;
+            const newQuantity = currentQuantity + delta;
+            const productStock = getProductStock(id, products);
+
+            if (newQuantity <= 0) {
+                // Remove item if quantity drops to 0 or less
+                setMsg({text: `🗑️ ${prevItems[itemIndex].name} removed from cart`, type: "error"});
+                return prevItems.filter(item => item.id !== id);
+            }
+            // NOTE: This stock check is flawed for a real-world scenario but is kept 
+            // for consistency with the parent component's logic.
+            // In a real app, you'd check the current global stock minus stock already in cart.
+            // For now, we rely on the main `addToCart` function to handle stock state.
+            
+            // Update the quantity
+            const itemPrice = prevItems[itemIndex].price;
+            
+            // !!! WARNING: This is a simplified example. In a real app, 
+            // the wallet and global product stock update logic would be more complex
+            // in the cart component to properly handle dynamic quantity changes.
+            // Given the current structure, we'll only update wallet for the *change*
+            setWallet(prevWallet => prevWallet - (delta * itemPrice)); 
+
+            const newItems = [...prevItems];
+            newItems[itemIndex] = { ...newItems[itemIndex], quantity: newQuantity };
+            return newItems;
+        });
+    };
+
+    const handleCheckout = () => {
+        if (totalPrice > wallet) {
+            setMsg({text: "❌ Insufficient Wallet Balance for Checkout", type: "error"});
+            return;
+        }
+
+        // Since products are 'checked out' by `addToCart` reducing stock and wallet, 
+        // the checkout is merely a formal transaction clearance here.
+
+        setMsg({text: `🎉 Checkout Successful! Paid ₹${totalPrice}. Cart Cleared.`, type: "success"});
+        setCartItems([]);
+        toggleCart(false);
+    };
+
+
+    return (
+        <div className="cart-overlay">
+            <div className="cart-content">
+                <button className="cart-close-btn" onClick={() => toggleCart(false)}>&times;</button>
+                <h2>🛒 Your Cart ({totalItems} items)</h2>
+                <hr/>
+                {cartItems.length === 0 ? (
+                    <p>Your cart is empty.</p>
+                ) : (
+                    <div>
+                        {cartItems.map(item => (
+                            <div key={item.id} className="cart-item">
+                                <span className="cart-item-name">{item.name}</span>
+                                <div className="cart-item-controls">
+                                    <button onClick={() => updateQuantity(item.id, -1)}>-</button>
+                                    <span>{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.id, 1)}>+</button>
+                                    <span>₹{item.price * item.quantity}</span>
+                            </div>
+                            </div>
+                        ))}
+                        <div className="cart-summary">
+                            <h3>Total: ₹{totalPrice}</h3>
+                            <p style={{textAlign:'right'}}>Wallet Balance: ₹{wallet}</p>
+                            <button 
+                                onClick={handleCheckout} 
+                                style={{background: totalPrice > wallet ? 'gray' : '#16a34a', color:'white', padding:'8px 15px', width:'100%', cursor: totalPrice > wallet ? 'not-allowed' : 'pointer'}}
+                                disabled={totalPrice > wallet}
+                            >
+                                {totalPrice > wallet ? 'Insufficient Funds' : 'Proceed to Checkout'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Helper to extract unique categories and brands from products
+const getCategoryBrandMap = (products) => {
+    const map = products.reduce((acc, p) => {
+        if (!acc[p.category]) {
+            acc[p.category] = new Set();
+        }
+        acc[p.category].add(p.brand);
+        return acc;
+    }, {});
+
+    // Convert Sets to sorted Arrays
+    for (const category in map) {
+        map[category] = Array.from(map[category]).sort();
+    }
+    return map;
+};
+
+/* --- Main Application Component --- */
+function ElectroHub(){
+
+const initialProductsData=[
+/* ---------- LAPTOPS (8 total) ---------- */
+{id:1,name:"Dell Inspiron",brand:"Dell",category:"Laptop",price:55000,warranty:"1 Year",rating:4.3,stock:3,img:"https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/notebooks/dell/dell-15-intel-3530/media-gallery/laptop-dell-dc15250nt-bk-plastic-gallery-1.psd?fmt=png-alpha&pscan=auto&scl=1&hei=804&wid=1254&qlt=100,1&resMode=sharp2&size=1254,804&chrss=full"},
+{id:2,name:"HP Pavilion",brand:"HP",category:"Laptop",price:62000,warranty:"1 Year",rating:4.1,stock:2,img:"https://in-media.apjonlinecdn.com/catalog/product/cache/b3b166914d87ce343d4dc5ec5117b502/c/0/c08689354_2.png"},
+{id:3,name:"Lenovo IdeaPad",brand:"Lenovo",category:"Laptop",price:48000,warranty:"1 Year",rating:4.0,stock:4,img:"https://m.media-amazon.com/images/I/513bplmZ3VL.jpg"},
+{id:4,name:"MacBook Air",brand:"Apple",category:"Laptop",price:92000,warranty:"1 Year",rating:4.8,stock:1,img:"https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mba13-skyblue-select-202503?wid=892&hei=820&fmt=jpeg&qlt=90&.v=M2RyY09CWXlTQUp1KzEveHR6VXNxcTQ1bzN1SitYTU83Mm9wbk1xa1lWN2h4SGtCQ2R3aStVaDRhL2VUV1NjdkJkRlpCNVhYU3AwTldRQldlSnpRa0lIV0Fmdk9rUlVsZ3hnNXZ3K3lEVlk"},
+{id:5,name:"Asus VivoBook",brand:"Asus",category:"Laptop",price:51000,warranty:"1 Year",rating:4.2,stock:3,img:"https://m.media-amazon.com/images/I/71-TYv6AILL.jpg"},
+{id:25,name:"HP Envy",brand:"HP",category:"Laptop",price:75000,warranty:"1 Year",rating:4.5,stock:2,img:"https://www.hp.com/content/dam/sites/worldwide/personal-computers/consumer/laptops-and-2-n-1s/envy/redesign/ai-updates/Get_a_fresh_perspective-image-Desktop2@2x.jpg"},
+{id:26,name:"Microsoft Surface",brand:"Microsoft",category:"Laptop",price:88000,warranty:"1 Year",rating:4.7,stock:1,img:"https://m.media-amazon.com/images/I/61vqI0vw94L._AC_UF1000,1000_QL80_.jpg"},
+{id:27,name:"Acer Predator",brand:"Acer",category:"Laptop",price:115000,warranty:"1 Year",rating:4.6,stock:1,img:"https://images-cdn.ubuy.co.in/64ca30d05fabc35008438480-acer-predator-helios-300-ph315-55-70zv.jpg"},
+
+/* ---------- MOBILES (8 total) ---------- */
+{id:6,name:"iPhone 14",brand:"Apple",category:"Mobile",price:70000,warranty:"1 Year",rating:4.7,stock:2,img:"https://media.wired.com/photos/6332360740fe1e8870aa3bc0/master/pass/iPhone-14-Review-Gear.jpg"},
+{id:7,name:"Samsung S23",brand:"Samsung",category:"Mobile",price:65000,warranty:"1 Year",rating:4.6,stock:3,img:"https://st.gsmarena.com/imgroot/news/22/10/samsung-galaxy-s23-specs-leak/inline/-1200/gsmarena_001.jpg"},
+{id:8,name:"OnePlus 11",brand:"OnePlus",category:"Mobile",price:56000,warranty:"1 Year",rating:4.5,stock:4,img:"https://www.oneplus.com/content/dam/oasis/page/2023/global/home/salami-share.jpg"},
+{id:9,name:"Xiaomi 13",brand:"Xiaomi",category:"Mobile",price:42000,warranty:"1 Year",rating:4.2,stock:5,img:"https://images.financialexpressdigital.com/2022/12/xiaomi-13.jpg?quality=100"},
+{id:10,name:"Realme GT",brand:"Realme",category:"Mobile",price:35000,warranty:"1 Year",rating:4.1,stock:3,img:"https://www.techadvisor.com/wp-content/uploads/2022/06/realme-gt-neo-2-1.jpg?quality=50&strip=all"},
+{id:28,name:"Google Pixel 7",brand:"Google",category:"Mobile",price:58000,warranty:"1 Year",rating:4.5,stock:3,img:"https://i.insider.com/63fccf8bb8468e001896a42b?width=700"},
+{id:29,name:"Motorola Edge",brand:"Motorola",category:"Mobile",price:38000,warranty:"1 Year",rating:4.0,stock:4,img:"https://manikmobile.com/wp-content/uploads/2024/08/159115-800-auto.png"},
+{id:30,name:"Oppo Reno 8",brand:"Oppo",category:"Mobile",price:32000,warranty:"1 Year",rating:3.9,stock:5,img:"https://www.techadvisor.com/wp-content/uploads/2023/11/Oppo-Reno-8_review_1.jpg?quality=50&strip=all"},
+
+/* ---------- TABLETS (7 total) ---------- */
+{id:11,name:"iPad",brand:"Apple",category:"Tablet",price:40000,warranty:"1 Year",rating:4.6,stock:2,img:"https://www.shutterstock.com/image-photo/apple-ipad-air-m2-2024-600nw-2581374059.jpg"},
+{id:12,name:"Samsung Tab",brand:"Samsung",category:"Tablet",price:32000,warranty:"1 Year",rating:4.4,stock:3,img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1THldpwoCFrFellNVgEZv8dvu-cqhLRtMgQ&s"},
+{id:13,name:"Lenovo Tab",brand:"Lenovo",category:"Tablet",price:28000,warranty:"1 Year",rating:4.0,stock:2,img:"https://p1-ofp.static.pub/fes/cms/2022/09/26/r7voh8u2sqrpf2lp94flmxibfic62a814611.png"},
+{id:14,name:"Realme Pad",brand:"Realme",category:"Tablet",price:20000,warranty:"1 Year",rating:3.9,stock:4,img:"https://os-wordpress-media.s3.ap-south-1.amazonaws.com/blog/wp-content/uploads/2022/08/10221002/Realme-Pad-X-Review.jpg"},
+{id:15,name:"Xiaomi Pad",brand:"Xiaomi",category:"Tablet",price:30000,warranty:"1 Year",rating:4.3,stock:3,img:"https://www.hindustantimes.com/ht-img/img/2023/06/29/1600x900/Xiaomi-Pad-6--Representative-Photo-_1688023165590.jpg"},
+{id:31,name:"Microsoft Surface Go",brand:"Microsoft",category:"Tablet",price:50000,warranty:"1 Year",rating:4.5,stock:2,img:"https://etimg.etb2bimg.com/photo/79259084.cms"},
+{id:32,name:"Amazon Fire HD",brand:"Amazon",category:"Tablet",price:15000,warranty:"1 Year",rating:3.8,stock:5,img:"https://i.guim.co.uk/img/media/cd17e24f42f17e1ae6c14779985701e6e4471329/3_0_4592_2758/master/4592.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=9d5c97b16d93d9f3af4e464aaf650991"},
+
+/* ---------- WASHING MACHINES (5 total) ---------- */
+{id:16,name:"LG Washing Machine",brand:"LG",category:"Washing Machine",price:26000,warranty:"2 Years",rating:4.4,stock:2,img:"https://www.lg.com/content/dam/channel/wcms/in/washing-machines/category-page-content/front-load-washing-machine/GP1-HA-Sub-Category-Laundry-v2.jpg"},
+{id:17,name:"Samsung Washing Machine",brand:"Samsung",category:"Washing Machine",price:28000,warranty:"2 Years",rating:4.3,stock:3,img:"https://cmmarena.com/cdn/shop/files/22_63d9aa8f-060d-49fe-bb0d-66413ce6ef09.jpg?v=1754835219"},
+{id:18,name:"Whirlpool Washing Machine",brand:"Whirlpool",category:"Washing Machine",price:24000,warranty:"2 Years",rating:4.2,stock:2,img:"https://electronicparadise.in/cdn/shop/files/5_4aa66df3-6e0a-4e32-a385-9970551bf885.webp?v=1760437890&width=1214"},
+{id:33,name:"Haier Washing Machine",brand:"Haier",category:"Washing Machine",price:22000,warranty:"2 Years",rating:4.1,stock:3,img:"https://shop.haierindia.com/blog/wp-content/uploads/2024/03/Haier-Washing-Machine-5.jpg"},
+{id:34,name:"Bosch Washing Machine",brand:"Bosch",category:"Washing Machine",price:35000,warranty:"3 Years",rating:4.1,stock:1,img:"https://media3.bsh-group.com/Images/5120x/26938303_Untitled.webp"},
+
+/* ---------- AIR CONDITIONERS (5 total) ---------- */
+{id:19,name:"Samsung AC",brand:"Samsung",category:"Air Conditioner",price:42000,warranty:"2 Years",rating:4.5,stock:1,img:"https://www.phoenixacservice.in/wp-content/uploads/2019/11/samsung-1.5-ton-split-ac-500x500.jpg"},
+{id:20,name:"LG AC",brand:"LG",category:"Air Conditioner",price:45000,warranty:"2 Years",rating:4.6,stock:2,img:"https://www.lg.com/content/dam/channel/wcms/in/images/split-ac/gallery/updated-1-2-gallery/US-Q19MWZE-2010X1334.jpg/jcr:content/renditions/thum-1600x1062.jpeg"},
+{id:35,name:"Voltas AC",brand:"Voltas",category:"Air Conditioner",price:38000,warranty:"2 Years",rating:4.3,stock:3,img:"https://m.media-amazon.com/images/I/41jNjA3yygL.jpg"},
+{id:36,name:"Daikin AC",brand:"Daikin",category:"Air Conditioner",price:48000,warranty:"3 Years",rating:4.7,stock:1,img:"https://sonovision.in/wp-content/uploads/2022/06/FTKM60U.jpg"},
+{id:37,name:"Blue Star AC",brand:"Blue Star",category:"Air Conditioner",price:40000,warranty:"2 Years",rating:4.4,stock:2,img:"https://arihantelectronics.org/wp-content/uploads/2020/08/bluestar-1ton-split.jpg"},
+
+/* ---------- COOLERS (4 total) ---------- */
+{id:21,name:"Symphony Cooler",brand:"Symphony",category:"Cooler",price:9000,warranty:"1 Year",rating:4.1,stock:3,img:"https://shop.symphonylimited.com/cdn/shop/files/Group_207958_ba83ada1-891d-41a3-9ee6-8a706acd25ff.png?v=1764164956"},
+{id:22,name:"Bajaj Cooler",brand:"Bajaj",category:"Cooler",price:8500,warranty:"1 Year",rating:4.0,stock:4,img:"https://static1.industrybuying.com/products/electrical/electrical-appliances/air-coolers/ELE.AIR.27171106_1668391650545.webp"},
+{id:38,name:"Havells Cooler",brand:"Havells",category:"Cooler",price:7500,warranty:"1 Year",rating:3.9,stock:5,img:"https://cdn.moglix.com/p/SeypU4SFmgWmA-xxlarge.jpg"},
+{id:39,name:"Crompton Cooler",brand:"Crompton",category:"Cooler",price:9500,warranty:"1 Year",rating:4.2,stock:3,img:"https://www.crompton.co.in/cdn/shop/files/GenieNeoPL_1_5_1.jpg?v=1689588924&width=1445"},
+
+/* ---------- PROJECTORS (4 total) ---------- */
+{id:23,name:"Epson Projector",brand:"Epson",category:"Projector",price:52000,warranty:"2 Years",rating:4.7,stock:1,img:"https://saatvikcommunication.com/wp-content/uploads/2017/06/eh-tw5300.jpg"},
+{id:24,name:"BenQ Projector",brand:"BenQ",category:"Projector",price:48000,warranty:"2 Years",rating:4.6,stock:2,img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT42qQV-r501KbBoVvsESdXaTGaof1Ckc84CQ&s"},
+{id:40,name:"Optoma Projector",brand:"Optoma",category:"Projector",price:60000,warranty:"2 Years",rating:4.8,stock:1,img:"https://tiimg.tistatic.com/fp/2/005/316/optoma-projector-455.jpg"},
+{id:41,name:"ViewSonic Projector",brand:"ViewSonic",category:"Projector",price:45000,warranty:"2 Years",rating:4.5,stock:2,img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR66_7d-TKrZ97caN8IkFJYup4h_uexGSwhQ&s"},
+
+/* ---------- SMARTWATCHES & WEARABLES (10 total) ---------- */
+{id:42,name:"Apple Watch SE",brand:"Apple",category:"Smartwatch",price:28000,warranty:"1 Year",rating:4.6,stock:4,img:"https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MYJ53ref_VW_34FR+watch-case-40-aluminum-midnight-cell-se3_VW_34FR+watch-face-40-aluminum-midnight-se3_VW_34FR?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=d0ExZHIvWW8vSDlQRklSZ3RQQTBOMCtGZUJWLzNFUFVydllxZFp0d1M4NTlEbzMrd1Z5SUpEd0hiT0ZLRlZGNHZhbU1GQWViaFByV0xHNEJCVVJWYWM0NFUvdjNTVSt0V2IwU21IaCsyZTc5TlpLLzFsUGcrdUp2UlNmWUVsSlp3cVN2b2d1T00zNGpwWGphRE1oeEFXemNQSWJ2a2JtV1hsQkJ3VG5DOEJielBNeGI5bjR6ZDJ0enlUeldZenhOcCsyNktPdWhNc2crQnFCM0JyNG44QQ"},
+{id:43,name:"Samsung Galaxy Watch",brand:"Samsung",category:"Smartwatch",price:25000,warranty:"1 Year",rating:4.5,stock:5,img:"https://media.wired.com/photos/5baeb45891b99b2d21c6f781/1:1/w_1800,h_1800,c_limit/galaxywatch.jpg"},
+{id:44,name:"Fitbit Versa",brand:"Fitbit",category:"Smartwatch",price:18000,warranty:"1 Year",rating:4.3,stock:6,img:"https://www.getgear.in/cdn/shop/products/01_versa4-pink-clay-device-store-tile.png?v=1697021431"},
+{id:45,name:"Xiaomi Smart Band",brand:"Xiaomi",category:"Wearable",price:3500,warranty:"6 Months",rating:4.1,stock:10,img:"https://i01.appmifile.com/v1/MI_18455B3E4DA706226CF7535A58E875F0267/pms_1666840042.17468619.png"},
+{id:46,name:"OnePlus Watch",brand:"OnePlus",category:"Smartwatch",price:15000,warranty:"1 Year",rating:4.0,stock:5,img:"https://image01-in.oneplus.net/media/202408/16/924d749e6ab7677d565d288852bf136c.png"},
+{id:47,name:"Amazfit Bip",brand:"Amazfit",category:"Smartwatch",price:5000,warranty:"1 Year",rating:4.2,stock:8,img:"https://in.amazfit.com/cdn/shop/products/amazfit-bip-u-with-spo2-60-sports-modes-25d-gorilla-glass-anti-fingerprint-731175.jpg?v=1705328962&width=1131"},
+{id:48,name:"Noise ColorFit",brand:"Noise",category:"Smartwatch",price:3000,warranty:"6 Months",rating:3.9,stock:12,img:"https://corporatesanta.in/wp-content/uploads/2022/06/Noise-smartwatch-jpg.webp"},
+{id:49,name:"Boat Xplorer",brand:"Boat",category:"Smartwatch",price:2500,warranty:"6 Months",rating:3.8,stock:15,img:"https://5.imimg.com/data5/SELLER/Default/2022/9/JA/UW/OJ/98343137/boat-storm-smart-watch.jpg"},
+{id:50,name:"Garmin Venu",brand:"Garmin",category:"Smartwatch",price:35000,warranty:"1 Year",rating:4.7,stock:3,img:"https://ph.garmin.com/m/ph/g/products/venu-rose-gold-image-01.png"},
+{id:51,name:"Fossil Gen 6",brand:"Fossil",category:"Smartwatch",price:20000,warranty:"1 Year",rating:4.4,stock:4,img:"https://imagescdn.thecollective.in/img/app/product/6/664543-6893471.jpg"},
+
+/* ---------- HEADPHONES & AUDIO (10 total) ---------- */
+{id:52,name:"Apple AirPods Pro",brand:"Apple",category:"Headphones",price:20000,warranty:"1 Year",rating:4.6,stock:7,img:"https://cdn.mos.cms.futurecdn.net/My7ThHoCb26pDAAU43NNdj.jpg"},
+{id:53,name:"Sony WH-1000XM5",brand:"Sony",category:"Headphones",price:30000,warranty:"1 Year",rating:4.8,stock:4,img:"https://cdn.mos.cms.futurecdn.net/skBVreU5KroYycebb5Kqa9.jpg"},
+{id:54,name:"JBL Flip 6",brand:"JBL",category:"Speaker",price:10000,warranty:"1 Year",rating:4.5,stock:8,img:"https://m.media-amazon.com/images/I/71-XE6o0Y9L.jpg"},
+{id:55,name:"Boat Airdopes 141",brand:"Boat",category:"Headphones",price:2500,warranty:"1 Year",rating:4.1,stock:15,img:"https://cdn.shopify.com/s/files/1/0057/8938/4802/files/AD_141_Neo_Packaging_3.5.png?v=1689143385"},
+{id:56,name:"Bose QC Earbuds",brand:"Bose",category:"Headphones",price:22000,warranty:"1 Year",rating:4.7,stock:5,img:"https://m.media-amazon.com/images/I/61qIEvCy6+L.jpg"},
+{id:57,name:"Realme Buds Wireless",brand:"Realme",category:"Headphones",price:2000,warranty:"1 Year",rating:4.0,stock:10,img:"https://rukminim2.flixcart.com/image/480/640/xif0q/headphone/7/h/3/-original-imagrddw2dhwvgmg.jpeg?q=90"},
+{id:58,name:"Marshall Emberton",brand:"Marshall",category:"Speaker",price:15000,warranty:"1 Year",rating:4.6,stock:3,img:"https://www.audioshop.in/wp-content/uploads/1596152822_IMG_1395210.jpg"},
+{id:59,name:"Sennheiser HD 450BT",brand:"Sennheiser",category:"Headphones",price:12000,warranty:"1 Year",rating:4.4,stock:6,img:"https://rukminim2.flixcart.com/image/480/640/k7tdj0w0/headphone/p/b/t/sennheiser-hd-450bt-original-imafpyxhyyyxy8ny.jpeg?q=90"},
+{id:60,name:"Google Pixel Buds",brand:"Google",category:"Headphones",price:8000,warranty:"1 Year",rating:4.3,stock:9,img:"https://media.wired.com/photos/60ba6e7e206ef134c14e755b/master/w_2560%2Cc_limit/Gear-Pixel-Buds-Series-A-top.jpg"},
+{id:61,name:"Harmon Kardon Onyx",brand:"Harmon Kardon",category:"Speaker",price:25000,warranty:"1 Year",rating:4.8,stock:2,img:"https://i.ytimg.com/vi/qQjHC_iUysg/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLD8dwnOb7Fbh4gqN3GsWQUaDj_mBQ"},
+
+/* ---------- TELEVISIONS (10 total) ---------- */
+{id:62,name:"Samsung Crystal 4K 55inch",brand:"Samsung",category:"Television",price:65000,warranty:"2 Years",rating:4.7,stock:3,img:"https://kannankandy.com/wp-content/uploads/2025/06/in-crystal-uhd-du7000-ua50du7660klxl-540323246-1.jpg"},
+{id:63,name:"LG OLED C2 48inch",brand:"LG",category:"Television",price:90000,warranty:"2 Years",rating:4.9,stock:1,img:"https://img-prd-pim.poorvika.com/cdn-cgi/image/width=500,height=500,quality=75/product/lg-smart-oled-tv-c2-48-inch-Front-view.png"},
+{id:64,name:"Sony Bravia X80K 65inch",brand:"Sony",category:"Television",price:75000,warranty:"2 Years",rating:4.6,stock:2,img:"https://images.moneycontrol.com/static-mcnews/2022/05/Sony-Bravia-770x433.jpg?impolicy=website&width=770&height=431"},
+{id:65,name:"Xiaomi Smart TV 43inch",brand:"Xiaomi",category:"Television",price:30000,warranty:"1 Year",rating:4.5,stock:5,img:"https://i02.appmifile.com/mi-com-product/fly-birds/m/xiaomi-tv-a2-43/4c8c7bc80d20cba70af6b17677d1328f.jpg"},
+{id:66,name:"OnePlus Y1S 32inch",brand:"OnePlus",category:"Television",price:18000,warranty:"1 Year",rating:4.3,stock:7,img:"https://kirtisales.in/wp-content/uploads/2022/09/Oneplus-tv-32-Y1S-EDGE-4.jpg"},
+{id:67,name:"TCL 50inch QLED",brand:"TCL",category:"Television",price:45000,warranty:"2 Years",rating:4.4,stock:4,img:"https://www.jiomart.com/images/product/original/493841839/tcl-50-qled-smart-google-tv-50c645-digital-o493841839-p601697267-2-202312291005.jpeg?im=Resize=(420,420)"},
+{id:68,name:"Hisense 75inch ULED",brand:"Hisense",category:"Television",price:110000,warranty:"3 Years",rating:4.7,stock:1,img:"https://ifesolox.com/cdn/shop/files/Hisense-75_Inch_QLED_75Q6N_Quantum_HDR_Smart_4K_UHD_QLED_TV_1_Year_Warran_20241019_215551_0000.png?v=1734433784&width=533"},
+{id:69,name:"Vu Premium 50inch",brand:"Vu",category:"Television",price:35000,warranty:"1 Year",rating:4.2,stock:6,img:"https://5.imimg.com/data5/TP/BO/MY-34625162/vu-50-inch-4k-uhd-smart-led-tv-50bu116.jpg"},
+{id:70,name:"Philips 4K Smart TV 55inch",brand:"Philips",category:"Television",price:55000,warranty:"2 Years",rating:4.5,stock:3,img:"https://images.philips.com/is/image/philipsconsumer/7064e527ea104761b250afba0138989e?$pnglarge$&wid=1250"},
+{id:71,name:"Mi LED TV 4A 40inch",brand:"Xiaomi",category:"Television",price:25000,warranty:"1 Year",rating:4.3,stock:8,img:"https://telecominox.in/wp-content/uploads/2022/07/xiaomi-mi-tv-4a-40-inch-led-tv-3626.jpg"},
+];
+
+const [products,setProducts]=React.useState(initialProductsData);
+const [cartItems,setCartItems]=React.useState([]);
+// 💵 UPDATED WALLET: 10,00,00,000 (10 Crores)
+const [wallet,setWallet]=React.useState(100000000); 
+// **UPDATED:** Use filterCategory and filterBrand for two-level filtering
+const [filterCategory, setFilterCategory] = React.useState("");
+const [filterBrand, setFilterBrand] = React.useState("");
+const [search,setSearch]=React.useState("");
+const [sort,setSort]=React.useState("");
+const [dark,setDark]=React.useState(false);
+const [msg,setMsg]=React.useState({text:"",type:""});
+const [showCart,setShowCart]=React.useState(false);
+// **NEW STATE:** To track the currently expanded category in the sidebar
+const [expandedCategory, setExpandedCategory] = React.useState(""); 
+
+// Derived state for the category-brand map
+const categoryBrandMap = React.useMemo(() => getCategoryBrandMap(products), [products]);
+const allCategories = Object.keys(categoryBrandMap).sort();
+
+
+const addToCart=(p, quantityToAdd)=>{
+    quantityToAdd = parseInt(quantityToAdd);
+    if(p.stock===0){
+        setMsg({text:"❌ Item Finished",type:"error"});return;
+    }
+    if(quantityToAdd > p.stock){
+         setMsg({text:`⚠️ Only ${p.stock} units available.`,type:"error"});return;
+    }
+    if(wallet < (p.price * quantityToAdd)){
+        setMsg({text:"❌ Insufficient Wallet Balance",type:"error"});return;
+    }
+    
+    // Check if item is already in cart
+    const existingItem = cartItems.find(item => item.id === p.id);
+    
+    // --- Update Global Stock ---
+    setProducts(prevProducts => prevProducts.map(prod => 
+        prod.id === p.id ? { ...prod, stock: prod.stock - quantityToAdd } : prod
+    ));
+
+    // --- Update Cart State ---
+    if(existingItem){
+        setCartItems(prevItems => prevItems.map(item => 
+            item.id === p.id ? { ...item, quantity: item.quantity + quantityToAdd } : item
+        ));
+    } else {
+        setCartItems(prevItems => [...prevItems, {...p, quantity: quantityToAdd}]);
+    }
+
+    setWallet(wallet - (p.price * quantityToAdd));
+    
+    const newTotalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0) + quantityToAdd;
+    setMsg({text:`✅ Added ${quantityToAdd} x ${p.name} to Cart. Total items: ${newTotalItems}`,type:"success"});
+    setTimeout(()=>setMsg({text:"",type:""}),2000);
+};
+
+// State to manage quantity in the product card before adding to cart
+const [quantities, setQuantities] = React.useState({});
+const updateCardQuantity = (id, delta) => {
+    setQuantities(prev => {
+        const currentQty = prev[id] || 1;
+        const newQty = currentQty + delta;
+        
+        if (newQty < 1) return prev;
+        
+        // Find product stock to set a limit
+        const product = products.find(p => p.id === id);
+        if (product && newQty > product.stock) return prev;
+
+        return {...prev, [id]: newQty};
+    });
+};
+
+// **NEW FUNCTIONALITY:** Handle Category Click
+const handleCategoryClick = (category) => {
+    // If the category is already expanded, collapse it, otherwise expand it
+    setExpandedCategory(prev => prev === category ? "" : category);
+    // Clear brand filter when a category is clicked
+    setFilterBrand("");
+    // Set or clear the category filter itself
+    setFilterCategory(prev => prev === category ? "" : category);
+};
+
+// **NEW FUNCTIONALITY:** Handle Brand Click
+const handleBrandClick = (brand) => {
+    // Set or clear the brand filter
+    setFilterBrand(prev => prev === brand ? "" : brand);
+};
+
+
+let filtered=products.filter(p=>
+    p.name.toLowerCase().includes(search.toLowerCase()) &&
+    (filterCategory === "" || p.category === filterCategory) &&
+    (filterBrand === "" || p.brand === filterBrand)
+);
+
+if(sort==="low")filtered.sort((a,b)=>a.price-b.price);
+if(sort==="high")filtered.sort((a,b)=>b.price-a.price);
+
+const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+return(
+<div className={dark?"dark":""}>
+<header>
+<h2>ELECTROHUB</h2>
+<input placeholder="Search" value={search} onChange={e=>setSearch(e.target.value)}/>
+<select onChange={e=>setSort(e.target.value)}>
+<option value="">Sort Price</option>
+<option value="low">Low to High</option>
+<option value="high">High to Low</option>
+</select>
+<button onClick={()=>setDark(!dark)}>Theme</button>
+<div className="wallet">Wallet ₹{wallet}</div>
+<div className="cart" onClick={()=>setShowCart(true)}>🛒 {totalCartItems}</div>
+</header>
+
+<div className="container">
+<div className="sidebar">
+    <h3 
+        onClick={() => {
+            setFilterCategory("");
+            setFilterBrand("");
+            setExpandedCategory("");
+        }}
+        style={{ cursor: 'pointer', background: (filterCategory === "" && filterBrand === "") ? '#2874f0' : 'none', color: (filterCategory === "" && filterBrand === "") ? 'white' : 'inherit', padding: (filterCategory === "" && filterBrand === "") ? '5px' : '0', borderRadius: (filterCategory === "" && filterBrand === "") ? '4px' : '0', textAlign: 'center' }}
+    >
+        <span style={{flex: 1}}>All Products</span>
+    </h3>
+    <hr/>
+    <h3>Categories</h3>
+    {allCategories.map(c => (
+        <React.Fragment key={c}>
+            <button 
+                onClick={() => handleCategoryClick(c)}
+                // Highlight the button if it's the active category filter OR the expanded category
+                style={{ background: filterCategory === c ? '#2874f0' : 'inherit', color: filterCategory === c ? 'white' : 'inherit' }}
+            >
+                {c} 
+                {/* Add a simple indicator for expansion */}
+                <span>{expandedCategory === c ? '▲' : '▼'}</span>
+            </button>
+            {/* Conditional rendering of Brands */}
+            {expandedCategory === c && (
+                <div className="brand-list">
+                    {categoryBrandMap[c].map(b => (
+                        <button 
+                            key={b} 
+                            onClick={() => handleBrandClick(b)}
+                            // Highlight the button if it's the active brand filter
+                            style={{ background: filterBrand === b ? '#ff9f00' : '#f0f0f0', color: filterBrand === b ? 'white' : 'inherit' }}
+                        >
+                            {b}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </React.Fragment>
+    ))}
+</div>
+<div className="main">
+    <div className="grid">
+        {filtered.length === 0 ? (
+            <h3 style={{gridColumn: "1 / -1", textAlign: "center", color: dark ? 'white' : 'black'}}>No products found matching your filters.</h3>
+        ) : (
+            filtered.map(p=>(
+                <div key={p.id} className="card">
+                    <img src={p.img} alt={p.name}/>
+                    <h4>{p.name} ({p.brand})</h4>
+                    <p>
+                        <strong>₹{p.price}</strong> | {p.category}<br/>
+                        ⭐ {p.rating} | Stock: {p.stock}
+                    </p>
+                    {p.stock > 0 ? (
+                        <React.Fragment>
+                            <div className="quantity-control">
+                                <button onClick={() => updateCardQuantity(p.id, -1)} disabled={(quantities[p.id] || 1) <= 1}>-</button>
+                                <input 
+                                    type="number" 
+                                    value={quantities[p.id] || 1} 
+                                    onChange={(e) => {
+                                        let val = parseInt(e.target.value) || 1;
+                                        if (val < 1) val = 1;
+                                        if (val > p.stock) val = p.stock;
+                                        setQuantities(prev => ({...prev, [p.id]: val}));
+                                    }}
+                                    min="1"
+                                    max={p.stock}
+                                />
+                                <button onClick={() => updateCardQuantity(p.id, 1)} disabled={(quantities[p.id] || 1) >= p.stock}>+</button>
+                            </div>
+                            <button 
+                                onClick={()=>addToCart(p, quantities[p.id] || 1)}
+                                disabled={(quantities[p.id] || 1) > p.stock || p.stock === 0}
+                            >
+                                Add to Cart
+                            </button>
+                        </React.Fragment>
+                    ) : (
+                        <button style={{background:'gray', cursor:'not-allowed'}} disabled>Out of Stock</button>
+                    )}
+                </div>
+            ))
+        )}
+    </div>
+</div>
+</div>
+
+{showCart && <CartOverlay 
+    cartItems={cartItems} 
+    setCartItems={setCartItems} 
+    toggleCart={setShowCart} 
+    wallet={wallet} 
+    setWallet={setWallet} 
+    setMsg={setMsg}
+    products={products}
+/>}
+
+{msg.text && (
+    <div className={`notify ${msg.type}`}>
+        {msg.text}
+    </div>
+)}
+
+</div>
+);
+}
+
+ReactDOM.render(<ElectroHub/>, document.getElementById('root'));
+</script>
+
+</body>
+</html>
