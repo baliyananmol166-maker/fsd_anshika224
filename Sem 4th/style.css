@@ -1,0 +1,35 @@
+:root{
+    --col-1: blue;
+    --col-2: green;
+    --col-3: red;
+}
+body{
+    display:flex;
+    align-items: center;
+
+}
+
+
+.box-1{
+    width: 300px;
+    height: 300px;
+    background-color: var(--col-1,blue);
+    color: white;
+    font-style:25px;
+}
+
+.box-2{
+    width: 300px;
+    height: 300px;
+    background-color: var(--col-2,blue);
+    color: white;
+    font-style:25px;
+}
+
+.box-3{
+    width: 300px;
+    height: 300px;
+    background-color: var(--col-3,blue);
+    color: white;
+    font-style:25px;
+}
